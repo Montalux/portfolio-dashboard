@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Design-Mockups enthalten Echtdaten (Initiativen, Budgets), nur lokal
+design/mockups/

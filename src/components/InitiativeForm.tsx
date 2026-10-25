@@ -1,15 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { ErrorNote, btnOutline, btnSolid, inputCls, selectCls, textareaCls } from '@/components/mono'
 import type { Database } from '@/lib/database.types'
 import type { Initiative } from '@/lib/portfolio'
 
 type Update = Database['public']['Tables']['initiative']['Update']
-
-const selectCls =
-  'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
 // Parse Swiss formatted amounts like "12'000" or "12 000.50"
 const parseAmount = (s: string) => {
@@ -74,82 +68,86 @@ export function InitiativeForm({
   }
 
   return (
-    <form onSubmit={submit} className="space-y-6">
+    <form onSubmit={submit} className="flex flex-col gap-12">
       <Fieldset title="Initiative">
-        <Field label="Titel" id="title" wide>
-          <Input id="title" required value={v.title} onChange={set('title')} />
+        <Field label="Titel" id="title">
+          <input id="title" className={inputCls} required value={v.title} onChange={set('title')} />
         </Field>
-        <Field label="Status" id="status">
-          <select id="status" className={selectCls} value={v.status} onChange={set('status')}>
-            <option value="geplant">Geplant</option>
-            <option value="laufend">Laufend</option>
-            <option value="abgeschlossen">Abgeschlossen</option>
-            <option value="abgebrochen">Abgebrochen</option>
-          </select>
-        </Field>
-        <Field label="Start" id="start">
-          <Input id="start" type="date" value={v.start_date} onChange={set('start_date')} />
-        </Field>
-        <Field label="Due date" id="due">
-          <Input id="due" type="date" value={v.due_date} onChange={set('due_date')} />
-        </Field>
-        <Field label="Beschreibung" id="desc" wide>
-          <Textarea id="desc" rows={5} value={v.description} onChange={set('description')} />
+        <Grid min={260}>
+          <Field label="Status" id="status">
+            <select id="status" className={selectCls} value={v.status} onChange={set('status')}>
+              <option value="geplant">Geplant</option>
+              <option value="laufend">Laufend</option>
+              <option value="abgeschlossen">Abgeschlossen</option>
+              <option value="abgebrochen">Abgebrochen</option>
+            </select>
+          </Field>
+          <Field label="Start" id="start">
+            <input id="start" type="date" className={inputCls} value={v.start_date} onChange={set('start_date')} />
+          </Field>
+          <Field label="Due date" id="due">
+            <input id="due" type="date" className={inputCls} value={v.due_date} onChange={set('due_date')} />
+          </Field>
+        </Grid>
+        <Field label="Beschreibung" id="desc">
+          <textarea id="desc" rows={6} className={`${textareaCls} resize-y`} value={v.description} onChange={set('description')} />
         </Field>
       </Fieldset>
 
       <Fieldset title="Status (RAG)">
-        <Field label="Ampel" id="rag">
+        <Field label="Ampel" id="rag" className="max-w-[560px]">
           <select id="rag" className={selectCls} value={v.rag} onChange={set('rag')}>
             <option value="">Kein Status</option>
             <option value="gruen">Grün: im Plan</option>
-            <option value="gelb">Gelb: Abweichung, Team löst</option>
-            <option value="rot">Rot: Ziel gefährdet</option>
+            <option value="gelb">Gelb: Abweichung</option>
+            <option value="rot">Rot: kritisch</option>
           </select>
         </Field>
-        <Field label={needsReason ? 'Begründung (Pflicht)' : 'Begründung'} id="reason" wide>
-          <Input id="reason" required={needsReason} value={v.rag_reason} onChange={set('rag_reason')} placeholder="Eine Zeile, z.B. Verzug Vendor bei Code-Übergabe" />
+        <Field label={needsReason ? 'Begründung (Pflicht)' : 'Begründung'} id="reason">
+          <input id="reason" className={inputCls} required={needsReason} value={v.rag_reason} onChange={set('rag_reason')} placeholder="Eine Zeile, z.B. Verzug Vendor bei Code-Übergabe" />
         </Field>
-        <p className="text-xs text-neutral-500 md:col-span-2">
+        <p className="m-0 text-sm leading-[1.45] text-mono-muted">
           Termin: Gelb bis 4 Wochen Verzug, Rot darüber. Budget-Prognose: Gelb +10 bis 20 %, Rot über 20 %. Scope: Gelb bei Abstrichen, Rot wenn das Kernziel gefährdet ist.
         </p>
       </Fieldset>
 
       <Fieldset title="Entscheid">
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input type="checkbox" checked={v.decision_needed} onChange={(e) => setV({ ...v, decision_needed: e.target.checked })} />
+        <label className="inline-flex min-h-11 items-center gap-3 text-base">
+          <input type="checkbox" className="m-0 size-5 accent-mono-accent" checked={v.decision_needed} onChange={(e) => setV({ ...v, decision_needed: e.target.checked })} />
           Entscheid der GL nötig
         </label>
         {v.decision_needed && (
-          <Field label="Frage an die GL (Pflicht)" id="question" wide>
-            <Input id="question" required value={v.decision_question} onChange={set('decision_question')} placeholder="z.B. Zusatzbudget CHF 8'000 freigeben?" />
+          <Field label="Frage an die GL (Pflicht)" id="question">
+            <input id="question" className={inputCls} required value={v.decision_question} onChange={set('decision_question')} placeholder="z.B. Zusatzbudget CHF 8'000 freigeben?" />
           </Field>
         )}
       </Fieldset>
 
       <Fieldset title="Budget (aus dem Controlling-Excel)">
-        <Field label="Budget CHF" id="budget">
-          <Input id="budget" inputMode="decimal" value={v.budget_chf} onChange={set('budget_chf')} />
-        </Field>
-        <Field label="Budget-Status" id="bstatus">
-          <select id="bstatus" className={selectCls} value={v.budget_status} onChange={set('budget_status')}>
-            <option value="platzhalter">Platzhalter</option>
-            <option value="beantragt">Beantragt</option>
-            <option value="bewilligt">Bewilligt</option>
-          </select>
-        </Field>
-        <Field label="Ist verrechnet CHF" id="actual">
-          <Input id="actual" inputMode="decimal" value={v.actual_chf} onChange={set('actual_chf')} />
-        </Field>
-        <Field label="Prognose total CHF" id="forecast">
-          <Input id="forecast" inputMode="decimal" value={v.forecast_chf} onChange={set('forecast_chf')} />
-        </Field>
+        <Grid min={300}>
+          <Field label="Budget CHF" id="budget">
+            <input id="budget" type="text" inputMode="numeric" className={inputCls} value={v.budget_chf} onChange={set('budget_chf')} />
+          </Field>
+          <Field label="Budget-Status" id="bstatus">
+            <select id="bstatus" className={selectCls} value={v.budget_status} onChange={set('budget_status')}>
+              <option value="platzhalter">Platzhalter</option>
+              <option value="beantragt">Beantragt</option>
+              <option value="bewilligt">Bewilligt</option>
+            </select>
+          </Field>
+          <Field label="Ist verrechnet CHF" id="actual">
+            <input id="actual" type="text" inputMode="numeric" className={inputCls} value={v.actual_chf} onChange={set('actual_chf')} />
+          </Field>
+          <Field label="Prognose total CHF" id="forecast">
+            <input id="forecast" type="text" inputMode="numeric" className={inputCls} value={v.forecast_chf} onChange={set('forecast_chf')} />
+          </Field>
+        </Grid>
       </Fieldset>
 
-      {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p>}
-      <div className="flex gap-2">
-        <Button type="submit" disabled={saving}>{saving ? 'Speichert …' : 'Speichern'}</Button>
-        <Button type="button" variant="outline" onClick={onCancel}>Abbrechen</Button>
+      {error && <ErrorNote>{error}</ErrorNote>}
+      <div className="flex flex-wrap gap-3">
+        <button type="submit" className={btnSolid} disabled={saving}>{saving ? 'Speichert …' : 'Speichern'}</button>
+        <button type="button" className={btnOutline} onClick={onCancel}>Abbrechen</button>
       </div>
     </form>
   )
@@ -157,17 +155,21 @@ export function InitiativeForm({
 
 function Fieldset({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <fieldset className="rounded-xl border border-neutral-200 bg-white p-4">
-      <legend className="px-1 text-sm font-semibold">{title}</legend>
-      <div className="grid gap-4 md:grid-cols-2">{children}</div>
+    <fieldset className="m-0 min-w-0 rounded-xl border border-mono-line bg-white px-10 pt-9 pb-10">
+      <legend className="float-left m-0 mb-6 w-full p-0 text-2xl font-bold">{title}</legend>
+      <div className="clear-both flex flex-col gap-7">{children}</div>
     </fieldset>
   )
 }
 
-function Field({ label, id, wide, children }: { label: string; id: string; wide?: boolean; children: React.ReactNode }) {
+function Grid({ min, children }: { min: number; children: React.ReactNode }) {
+  return <div className="grid gap-7" style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(${min}px, 100%), 1fr))` }}>{children}</div>
+}
+
+function Field({ label, id, className = '', children }: { label: string; id: string; className?: string; children: React.ReactNode }) {
   return (
-    <div className={`space-y-1.5 ${wide ? 'md:col-span-2' : ''}`}>
-      <Label htmlFor={id}>{label}</Label>
+    <div className={`flex flex-col gap-2 ${className}`}>
+      <label htmlFor={id} className="text-base font-medium">{label}</label>
       {children}
     </div>
   )

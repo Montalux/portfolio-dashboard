@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
-import { ArrowLeft, CircleHelp, TriangleAlert } from 'lucide-react'
+import { TriangleAlert } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { errorText } from '@/lib/errors'
 import type { Database } from '@/lib/database.types'
-import { chf, fmtDate, ragState, warnings, type Initiative, type Milestone } from '@/lib/portfolio'
-import { Button } from '@/components/ui/button'
+import { STATUS_LABEL, chf, fmtDate, ragState, warnings, type Initiative, type Milestone } from '@/lib/portfolio'
+import { Content, ErrorNote, Page, PageHeader, Panel, btnDarkSolid, btnText } from '@/components/mono'
 import { RagBadge } from '@/components/RagBadge'
 import { BudgetBar } from '@/components/BudgetBar'
-import { InitiativeForm } from '@/components/InitiativeForm'
 import { MilestoneList, type MilestoneActions } from '@/components/MilestoneEditor'
 import { JiraLinkList, type LinkActions, type LinkWithSource, type SourceOption } from '@/components/JiraLinkList'
 
@@ -25,7 +24,7 @@ export type DetailData = {
   sources: SourceOption[]
 }
 
-const STATUS_LABEL = { geplant: 'Geplant', laufend: 'Laufend', abgeschlossen: 'Abgeschlossen', abgebrochen: 'Abgebrochen' }
+const BUDGET_STATUS_LABEL = { platzhalter: 'Platzhalter', beantragt: 'Beantragt', bewilligt: 'Bewilligt' }
 
 export default function InitiativePage() {
   const { key } = useParams()
@@ -56,16 +55,19 @@ export default function InitiativePage() {
     load()
   }, [load])
 
-  if (error) return <Page><Back /><p className="text-sm text-red-700">{error}</p></Page>
-  if (!data) return <Page><Back /><p className="text-sm text-neutral-500">Lade …</p></Page>
+  if (error || !data) {
+    return (
+      <Page>
+        <PageHeader back={{ to: '/', label: 'Übersicht' }} title={key ?? ''} />
+        <Content>
+          <p className="m-0 text-base text-mono-muted">{error ?? 'Lade …'}</p>
+        </Content>
+      </Page>
+    )
+  }
 
   const id = data.initiative.id
   const actions = {
-    save: async (values: Update) => {
-      const { error } = await supabase.from('initiative').update(values).eq('id', id)
-      if (!error) await load()
-      return errorText(error)
-    },
     archive: async () => {
       const { error } = await supabase.from('initiative').update({ archived_at: new Date().toISOString() } as Update).eq('id', id)
       if (!error) navigate('/')
@@ -115,113 +117,93 @@ export function InitiativeView({
   data: DetailData
   canEdit: boolean
   actions: {
-    save: (v: Update) => Promise<string | null>
     archive: () => Promise<string | null>
     milestones: MilestoneActions
     links: LinkActions
   }
 }) {
-  const [editing, setEditing] = useState(false)
   const [archiveError, setArchiveError] = useState<string | null>(null)
   const { initiative: i, milestones, links, deps } = data
   const warn = warnings(i, links)
 
   return (
     <Page>
-      <Back />
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-sm text-neutral-500">{i.key} · {STATUS_LABEL[i.status]}</p>
-          <h1 className="text-2xl font-semibold">{i.title}</h1>
-          <p className="mt-1 text-sm text-neutral-600">{fmtDate(i.start_date)} bis {fmtDate(i.due_date)}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <RagBadge state={ragState(i)} size="lg" />
-          {canEdit && !editing && <Button variant="outline" onClick={() => setEditing(true)}>Bearbeiten</Button>}
-        </div>
-      </header>
-
-      {editing ? (
-        <InitiativeForm
-          initial={i}
-          onCancel={() => setEditing(false)}
-          onSave={async (v) => {
-            const err = await actions.save(v)
-            if (!err) setEditing(false)
-            return err
-          }}
-        />
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            {(i.rag_reason || warn.length > 0) && (
-              <Box title="Status">
-                {i.rag_reason && <p className="text-sm">{i.rag_reason}</p>}
-                {i.rag_updated_at && <p className="mt-1 text-xs text-neutral-500">Aktualisiert {fmtDate(new Date(i.rag_updated_at))}</p>}
+      <PageHeader
+        back={{ to: '/', label: 'Übersicht' }}
+        eyebrow={`${i.key} · ${STATUS_LABEL[i.status]}`}
+        title={i.title}
+        subtitle={`${fmtDate(i.start_date)} bis ${fmtDate(i.due_date)}`}
+        right={
+          <>
+            <RagBadge state={ragState(i)} size={24} />
+            {canEdit && <Link to={`/initiative/${i.key}/bearbeiten`} className={`${btnDarkSolid} min-h-11 px-6 text-base no-underline`}>Bearbeiten</Link>}
+          </>
+        }
+      />
+      <Content>
+        <div className="flex flex-wrap items-start gap-12">
+          <div className="flex min-w-0 flex-[5_1_560px] flex-col gap-12">
+            {(i.rag_reason || i.decision_needed || warn.length > 0) && (
+              <Panel title="Status">
+                {i.rag_reason && <p className="m-0 text-base leading-[1.55]">{i.rag_reason}</p>}
+                {i.decision_needed && <p className="m-0 text-base leading-[1.55] font-bold">Entscheid nötig: {i.decision_question}</p>}
                 {warn.length > 0 && (
-                  <ul className="mt-3 space-y-1">
+                  <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
                     {warn.map((w) => (
-                      <li key={w.kind + w.text} className="flex items-center gap-1.5 text-sm">
-                        <TriangleAlert className="size-4 shrink-0 text-[#c27c00]" aria-hidden />{w.text}
+                      <li key={w.kind + w.text} className="flex items-center gap-2 text-base">
+                        <TriangleAlert className="size-4 shrink-0 text-mono-accent" aria-hidden />
+                        {w.text}
                       </li>
                     ))}
                   </ul>
                 )}
-              </Box>
+                {i.rag_updated_at && <p className="m-0 text-sm text-mono-muted">Status aktualisiert {fmtDate(new Date(i.rag_updated_at))}</p>}
+              </Panel>
             )}
-            {i.decision_needed && (
-              <div className="flex gap-3 rounded-xl border border-neutral-300 bg-white p-4">
-                <CircleHelp className="mt-0.5 size-5 shrink-0" aria-hidden />
-                <div>
-                  <p className="text-xs text-neutral-500">Entscheid nötig</p>
-                  <p className="font-medium">{i.decision_question}</p>
-                </div>
-              </div>
-            )}
-            <Box title="Beschreibung">
+            <Panel title="Beschreibung">
               {i.description ? (
-                <div className="prose-sm space-y-2 text-sm [&_a]:text-[#2a78d6] [&_a]:underline [&_a]:break-all">
+                <div className="flex flex-col gap-5 text-base leading-[1.55] break-words [&_a]:text-mono-accent [&_a]:underline [&_p]:m-0">
                   <Markdown>{i.description}</Markdown>
                 </div>
               ) : (
-                <p className="text-sm text-neutral-500">Keine Beschreibung.</p>
+                <p className="m-0 text-base text-mono-muted">Keine Beschreibung.</p>
               )}
-            </Box>
-            <Box title="Meilensteine">
+            </Panel>
+            <Panel title="Meilensteine">
               <MilestoneList items={milestones} canEdit={canEdit} actions={actions.milestones} />
-            </Box>
+            </Panel>
           </div>
 
-          <div className="space-y-6">
-            <Box title="Budget">
-              <BudgetBar i={i} />
-              <dl className="mt-3 grid grid-cols-2 gap-y-1 text-sm">
-                <dt className="text-neutral-600">Budget</dt><dd className="text-right tabular-nums">{chf(i.budget_chf)}</dd>
-                <dt className="text-neutral-600">Status</dt><dd className="text-right capitalize">{i.budget_status}</dd>
-                <dt className="text-neutral-600">Ist</dt><dd className="text-right tabular-nums">{chf(i.actual_chf)}</dd>
-                <dt className="text-neutral-600">Prognose</dt><dd className="text-right tabular-nums">{chf(i.forecast_chf)}</dd>
+          <div className="flex min-w-0 flex-[3_1_340px] flex-col gap-12">
+            <Panel title="Budget">
+              <BudgetBar i={i} thin />
+              <dl className="m-0 flex flex-col gap-2.5 text-base">
+                <Row label="Budget" value={chf(i.budget_chf)} />
+                <Row label="Status" value={BUDGET_STATUS_LABEL[i.budget_status]} />
+                <Row label="Ist" value={chf(i.actual_chf)} />
+                <Row label="Prognose" value={chf(i.forecast_chf)} />
               </dl>
-            </Box>
-            <Box title="Jira">
+            </Panel>
+            <Panel title="Jira">
               <JiraLinkList links={links} canEdit={canEdit} actions={actions.links} />
-            </Box>
+            </Panel>
             {deps.length > 0 && (
-              <Box title="Abhängigkeiten">
-                <ul className="space-y-1 text-sm">
+              <Panel title="Abhängigkeiten">
+                <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-base">
                   {deps.map((d) => (
                     <li key={d.direction + d.key}>
-                      <span className="text-neutral-500">{d.direction === 'blocks' ? 'Blockiert ' : 'Wartet auf '}</span>
-                      <Link className="text-[#2a78d6] hover:underline" to={`/initiative/${d.key}`}>{d.key}</Link> {d.title}
+                      <span className="text-mono-muted">{d.direction === 'blocks' ? 'Blockiert ' : 'Wartet auf '}</span>
+                      <Link className="text-mono-accent underline" to={`/initiative/${d.key}`}>{d.key}</Link> {d.title}
                     </li>
                   ))}
                 </ul>
-              </Box>
+              </Panel>
             )}
             {canEdit && (
-              <div>
-                <Button
-                  variant="ghost"
-                  className="text-neutral-600"
+              <div className="flex flex-col items-start gap-2">
+                <button
+                  type="button"
+                  className={btnText}
                   onClick={async () => {
                     if (window.confirm(`${i.key} archivieren? Sie verschwindet aus dem Dashboard, bleibt aber in der Datenbank.`)) {
                       setArchiveError(await actions.archive())
@@ -229,38 +211,22 @@ export function InitiativeView({
                   }}
                 >
                   Archivieren
-                </Button>
-                {archiveError && <p className="text-sm text-red-700">{archiveError}</p>}
+                </button>
+                {archiveError && <ErrorNote>{archiveError}</ErrorNote>}
               </div>
             )}
           </div>
         </div>
-      )}
+      </Content>
     </Page>
   )
 }
 
-function Page({ children }: { children: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-h-svh bg-neutral-50">
-      <div className="mx-auto max-w-6xl px-4 py-6">{children}</div>
+    <div className="flex justify-between gap-3">
+      <dt className="text-mono-muted">{label}</dt>
+      <dd className="m-0 tabular-nums">{value}</dd>
     </div>
-  )
-}
-
-function Back() {
-  return (
-    <Link to="/" className="mb-4 inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900">
-      <ArrowLeft className="size-4" aria-hidden /> Übersicht
-    </Link>
-  )
-}
-
-function Box({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="rounded-xl border border-neutral-200 bg-white p-4">
-      <h2 className="mb-3 text-sm font-semibold">{title}</h2>
-      {children}
-    </section>
   )
 }

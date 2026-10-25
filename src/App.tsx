@@ -5,6 +5,7 @@ import Login from '@/pages/Login'
 import Start from '@/pages/Start'
 import InitiativePage from '@/pages/InitiativePage'
 import NewInitiative from '@/pages/NewInitiative'
+import EditInitiative from '@/pages/EditInitiative'
 
 function Gate() {
   const { session, appUser, loading } = useAuth()
@@ -23,6 +24,7 @@ function Gate() {
     <Routes>
       <Route path="/" element={<Start />} />
       <Route path="/initiative/:key" element={<InitiativePage />} />
+      <Route path="/initiative/:key/bearbeiten" element={<EditInitiative />} />
       <Route path="/neu" element={<NewInitiative />} />
     </Routes>
   )

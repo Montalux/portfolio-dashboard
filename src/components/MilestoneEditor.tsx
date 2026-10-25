@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Trash2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { ErrorNote, btnSmall, inputCls } from '@/components/mono'
 import { fmtDate, type Milestone } from '@/lib/portfolio'
 
 export type MilestoneActions = {
@@ -30,40 +29,47 @@ export function MilestoneList({ items, canEdit, actions }: { items: Milestone[];
   }
 
   return (
-    <div className="space-y-3">
-      {sorted.length === 0 && <p className="text-sm text-neutral-500">Keine Meilensteine.</p>}
-      <ul className="divide-y divide-neutral-100">
-        {sorted.map((m) => (
-          <li key={m.id} className="flex items-center gap-3 py-2 text-sm">
-            {canEdit ? (
-              <input type="checkbox" aria-label="Erledigt" checked={m.done} onChange={() => actions && run(actions.toggle(m))} />
-            ) : (
-              <span className="w-4 text-center">{m.done ? '✓' : ''}</span>
-            )}
-            <span className="w-24 shrink-0 tabular-nums text-neutral-600">{fmtDate(m.due_date)}</span>
-            <span className={`flex-1 ${m.done ? 'text-neutral-500 line-through' : ''}`}>{m.title}</span>
-            {canEdit && actions && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                aria-label="Meilenstein löschen"
-                onClick={() => window.confirm(`Meilenstein "${m.title}" löschen?`) && run(actions.remove(m))}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            )}
-          </li>
-        ))}
-      </ul>
+    <div className="flex flex-col gap-5">
+      {sorted.length === 0 && <p className="m-0 text-base text-mono-muted">Keine Meilensteine.</p>}
+      {sorted.length > 0 && (
+        <ul className="m-0 list-none p-0">
+          {sorted.map((m) => (
+            <li key={m.id} className="flex items-center gap-3 border-b border-mono-rule py-2 text-base last:border-b-0">
+              {canEdit ? (
+                <input
+                  type="checkbox"
+                  aria-label="Erledigt"
+                  className="m-0 size-5 accent-mono-accent"
+                  checked={m.done}
+                  onChange={() => actions && run(actions.toggle(m))}
+                />
+              ) : (
+                <span className="w-5 text-center">{m.done ? '✓' : ''}</span>
+              )}
+              <span className="w-28 shrink-0 font-bold tabular-nums">{fmtDate(m.due_date)}</span>
+              <span className={`flex-1 ${m.done ? 'text-mono-muted line-through' : ''}`}>{m.title}</span>
+              {canEdit && actions && (
+                <button
+                  type="button"
+                  className="inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border-0 bg-transparent text-mono-muted focus-visible:outline-2 focus-visible:outline-mono-accent"
+                  aria-label="Meilenstein löschen"
+                  onClick={() => window.confirm(`Meilenstein "${m.title}" löschen?`) && run(actions.remove(m))}
+                >
+                  <Trash2 className="size-[18px]" aria-hidden />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       {canEdit && actions && (
-        <form onSubmit={submit} className="flex flex-wrap gap-2">
-          <Input className="min-w-48 flex-1" required placeholder="Neuer Meilenstein" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <Input className="w-40" type="date" required value={due} onChange={(e) => setDue(e.target.value)} />
-          <Button type="submit" variant="outline">Hinzufügen</Button>
+        <form onSubmit={submit} className="flex flex-wrap gap-3">
+          <input type="text" aria-label="Neuer Meilenstein" className={`${inputCls} min-w-0 flex-[1_1_220px] !w-auto`} required placeholder="Neuer Meilenstein" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input type="date" aria-label="Datum" className={`${inputCls} !w-auto flex-none`} required value={due} onChange={(e) => setDue(e.target.value)} />
+          <button type="submit" className={btnSmall}>Hinzufügen</button>
         </form>
       )}
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <ErrorNote>{error}</ErrorNote>}
     </div>
   )
 }

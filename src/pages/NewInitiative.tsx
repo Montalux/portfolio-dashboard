@@ -1,8 +1,8 @@
-import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { errorText } from '@/lib/errors'
+import { Content, Page, PageHeader } from '@/components/mono'
 import { InitiativeForm } from '@/components/InitiativeForm'
 
 export default function NewInitiative() {
@@ -11,12 +11,9 @@ export default function NewInitiative() {
   if (appUser?.role !== 'pm') return <Navigate to="/" replace />
 
   return (
-    <div className="min-h-svh bg-neutral-50">
-      <div className="mx-auto max-w-4xl px-4 py-6">
-        <Link to="/" className="mb-4 inline-flex items-center gap-1 text-sm text-neutral-600 hover:text-neutral-900">
-          <ArrowLeft className="size-4" aria-hidden /> Übersicht
-        </Link>
-        <h1 className="mb-6 text-2xl font-semibold">Neue Initiative</h1>
+    <Page>
+      <PageHeader back={{ to: '/', label: 'Übersicht' }} title="Neue Initiative" />
+      <Content>
         <InitiativeForm
           initial={{}}
           onCancel={() => navigate('/')}
@@ -27,7 +24,7 @@ export default function NewInitiative() {
             return errorText(error)
           }}
         />
-      </div>
-    </div>
+      </Content>
+    </Page>
   )
 }

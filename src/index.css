@@ -4,6 +4,28 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Montalux Mono (design/tokens.json) */
+@theme {
+  --font-sans: "DM Sans", Arial, sans-serif;
+  --color-mono-ink: #171e26;
+  --color-mono-tile: #1f2a35;
+  --color-mono-tile-line: #2e4559;
+  --color-mono-bg: #f4f7fa;
+  --color-mono-muted: #5a6572;
+  --color-mono-muted-dark: #c9d3dd;
+  --color-mono-subtle-dark: #8c929c;
+  --color-mono-accent: #475b6e;
+  --color-mono-accent-dark: #a9bccd;
+  --color-mono-done: #c9d3dd;
+  --color-mono-track: #e6ebf0;
+  --color-mono-line: #d9e0e7;
+  --color-mono-rule: #eef2f6;
+  --color-rag-green: #2fa66a;
+  --color-rag-yellow: #e2a92b;
+  --color-rag-red: #d9473f;
+  --color-rag-none: #c5cdd0;
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -119,5 +141,7 @@
   body {
     @apply bg-background text-foreground;
     @apply bg-background text-foreground;
+    background: var(--color-mono-bg);
+    color: var(--color-mono-ink);
   }
 }

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CircleHelp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import type { Tables } from '@/lib/database.types'
@@ -15,7 +14,7 @@ import {
   type JiraLink,
   type Milestone,
 } from '@/lib/portfolio'
-import { Button } from '@/components/ui/button'
+import { BandInner, Content, Page, btnDarkGhost, btnDarkSolid } from '@/components/mono'
 import { RagBadge } from '@/components/RagBadge'
 import { InitiativeCard } from '@/components/InitiativeCard'
 import { BudgetSummary } from '@/components/BudgetSummary'
@@ -59,116 +58,111 @@ export default function Start() {
     load()
   }, [load])
 
-  const header = (
-    <header className="mb-6 flex items-center justify-between gap-4">
-      <h1 className="text-xl font-semibold">Portfolio-Dashboard</h1>
-      <div className="flex items-center gap-3 text-sm">
-        {appUser?.role === 'pm' && <SyncButton onDone={load} />}
-        {appUser?.role === 'pm' && (
-          <Button asChild size="sm">
-            <Link to="/neu">Neue Initiative</Link>
-          </Button>
-        )}
-        <span className="hidden sm:inline">{appUser?.display_name}</span>
-        <Button variant="outline" size="sm" onClick={() => supabase.auth.signOut()}>Abmelden</Button>
-      </div>
-    </header>
+  const isPm = appUser?.role === 'pm'
+  const actions = (
+    <>
+      {isPm && <SyncButton onDone={load} />}
+      {isPm && <Link to="/neu" className={btnDarkSolid}>Neue Initiative</Link>}
+    </>
+  )
+  const account = (
+    <>
+      <span className="text-[15px] text-mono-muted-dark">{appUser?.display_name}</span>
+      <button type="button" className={btnDarkGhost} onClick={() => supabase.auth.signOut()}>Abmelden</button>
+    </>
   )
 
-  if (error) return <Shell>{header}<p className="text-sm text-red-700">Daten konnten nicht geladen werden: {error}</p></Shell>
-  if (!data) return <Shell>{header}<p className="text-sm text-neutral-500">Lade Daten …</p></Shell>
+  if (error || !data) {
+    return (
+      <Frame actions={actions} account={account}>
+        <Content wide>
+          <p className="m-0 text-base text-mono-muted">{error ? `Daten konnten nicht geladen werden: ${error}` : 'Lade Daten …'}</p>
+        </Content>
+      </Frame>
+    )
+  }
 
-  return <StartView data={data} header={header} />
+  return <StartView data={data} actions={actions} account={account} />
 }
 
-export function StartView({ data, header }: { data: Data; header: React.ReactNode }) {
+export function StartView({ data, actions, account }: { data: Data; actions?: React.ReactNode; account?: React.ReactNode }) {
   const { initiatives, milestones, links, lastSync, lastRun } = data
   const decisions = initiatives.filter((i) => i.decision_needed)
-  const tiles = tileInitiatives(initiatives)
   const linksOf = (id: string) => links.filter((l) => l.initiative_id === id)
   const lastChange = initiatives.map((i) => i.updated_at).sort().at(-1) ?? null
   const asOf = lastSync?.finished_at ?? lastChange
+  const tiles = tileInitiatives(initiatives)
 
-  return (
-    <Shell>
-      {header}
-
-      {/* 1. Headline */}
-      <section className="mb-8 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-neutral-200 bg-white p-4">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-neutral-600">Portfolio</span>
-          <RagBadge state={portfolioRag(initiatives)} size="lg" />
-        </div>
-        <span className="text-sm text-neutral-600">
+  const band = (
+    <>
+      <div className="flex flex-wrap items-center gap-x-8 gap-y-2.5 text-base text-mono-muted-dark">
+        <span className="inline-flex items-center gap-3">
+          <span>Portfolio</span>
+          <RagBadge state={portfolioRag(initiatives)} size={22} />
+        </span>
+        <span className={decisions.length > 0 ? 'font-bold text-mono-bg' : ''}>
           {decisions.length === 0 ? 'Keine offenen Entscheide' : `${decisions.length} ${decisions.length === 1 ? 'Entscheid' : 'Entscheide'} offen`}
         </span>
-        <span className="text-sm text-neutral-600">
+        <span className="font-medium text-mono-bg">
           {initiatives.filter((i) => i.status === 'laufend').length} laufend · {initiatives.filter((i) => i.status === 'geplant').length} geplant
         </span>
-        <span className="ml-auto text-right text-xs text-neutral-500">
+        <span className="grow" />
+        <span className="text-sm text-mono-subtle-dark">
           Datenstand {asOf ? fmtDate(new Date(asOf)) : '-'}
-          {lastRun && !lastRun.ok && <span className="block">Letzter Jira-Sync mit Fehlern ({fmtDate(new Date(lastRun.finished_at!))})</span>}
+          {lastRun && !lastRun.ok && ` · Letzter Jira-Sync mit Fehlern (${fmtDate(new Date(lastRun.finished_at!))})`}
         </span>
-      </section>
+      </div>
+      <BudgetSummary t={budgetTotals(initiatives)} />
+    </>
+  )
 
-      {/* 2. Decisions (hidden when empty) */}
-      {decisions.length > 0 && (
-        <Section title="Entscheid nötig">
-          <ul className="space-y-2">
-            {decisions.map((i) => (
-              <li key={i.id} className="flex gap-3 rounded-xl border border-neutral-300 bg-white p-4">
-                <CircleHelp className="mt-0.5 size-5 shrink-0 text-neutral-700" aria-hidden />
-                <div>
-                  <Link to={`/initiative/${i.key}`} className="text-xs text-neutral-500 hover:underline">{i.key} · {i.title}</Link>
-                  <p className="font-medium">{i.decision_question}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+  return (
+    <Frame actions={actions} account={account} band={band}>
+      <Content wide>
+        <Section title="Initiativen">
+          {tiles.length === 0 ? (
+            <p className="m-0 text-base text-mono-muted">Keine laufenden Initiativen.</p>
+          ) : (
+            <div className="grid gap-8 [grid-template-columns:repeat(auto-fit,minmax(300px,1fr))]">
+              {tiles.map((i) => <InitiativeCard key={i.id} i={i} links={linksOf(i.id)} />)}
+            </div>
+          )}
         </Section>
-      )}
-
-      {/* 3. Tiles */}
-      <Section title="Laufende und nächste Initiativen">
-        {tiles.length === 0 ? (
-          <p className="text-sm text-neutral-500">Keine laufenden Initiativen.</p>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {tiles.map((i) => <InitiativeCard key={i.id} i={i} links={linksOf(i.id)} />)}
-          </div>
-        )}
-      </Section>
-
-      {/* 4. Budget */}
-      <Section title="Budget">
-        <BudgetSummary t={budgetTotals(initiatives)} />
-      </Section>
-
-      {/* 5. Upcoming */}
-      <Section title="Nächste Termine (8 Wochen)">
-        <UpcomingList items={upcoming(initiatives, milestones, links)} />
-      </Section>
-
-      {/* 6. Timeline */}
-      <Section title="Timeline">
-        <Timeline items={timelineInitiatives(initiatives)} milestones={milestones} links={links} />
-      </Section>
-    </Shell>
+        <Section title="Timeline">
+          <Timeline items={timelineInitiatives(initiatives)} milestones={milestones} />
+        </Section>
+        <Section title="Nächste Termine (8 Wochen)">
+          <UpcomingList items={upcoming(initiatives, milestones, links)} />
+        </Section>
+      </Content>
+    </Frame>
   )
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+// Navy band with title and actions, then the content
+function Frame({ actions, account, band, children }: { actions?: React.ReactNode; account?: React.ReactNode; band?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="min-h-svh bg-neutral-50">
-      <div className="mx-auto max-w-7xl px-4 py-6">{children}</div>
-    </div>
+    <Page>
+      <BandInner wide className="gap-10 pt-8 pb-[72px]">
+        <div className="flex items-center justify-between gap-4">
+          <img src={`${import.meta.env.BASE_URL}montalux-logo.svg`} alt="Montalux" className="h-8 w-auto" />
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {actions}
+            {account}
+          </div>
+        </div>
+        <h1 className="m-0 text-[clamp(32px,6vw,44px)] leading-[1.05] font-bold">Portfolio-Dashboard</h1>
+        {band}
+      </BandInner>
+      {children}
+    </Page>
   )
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="mb-8">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-600">{title}</h2>
+    <section className="flex flex-col gap-8">
+      <h2 className="m-0 text-[32px] leading-[1.1] font-bold">{title}</h2>
       {children}
     </section>
   )

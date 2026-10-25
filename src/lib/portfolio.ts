@@ -11,6 +11,8 @@ export const STALE_DAYS = 14
 export const UPCOMING_DAYS = 56 // 8 weeks
 export const DONE_VISIBLE_DAYS = 92 // done initiatives stay visible (grey) for ~3 months
 
+export const STATUS_LABEL = { geplant: 'Geplant', laufend: 'Laufend', abgeschlossen: 'Abgeschlossen', abgebrochen: 'Abgebrochen' }
+
 const DAY = 24 * 60 * 60 * 1000
 
 export const today = () => {

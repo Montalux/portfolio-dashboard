@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { btnDarkGhost } from '@/components/mono'
+import { btnNav } from '@/components/mono'
 
 // Triggers the jira-sync Edge Function (PM only, checked server-side)
 export function SyncButton({ onDone }: { onDone: () => void }) {
@@ -22,9 +22,9 @@ export function SyncButton({ onDone }: { onDone: () => void }) {
   return (
     <span className="flex items-center gap-3">
       {msg && <span className="hidden max-w-64 truncate text-sm text-mono-muted-dark md:inline" title={msg}>{msg}</span>}
-      <button type="button" className={btnDarkGhost} onClick={run} disabled={running}>
-        <RefreshCw className={`size-[18px] text-mono-accent-dark ${running ? 'animate-spin' : ''}`} aria-hidden />
-        {running ? 'Aktualisiert …' : 'Jetzt aktualisieren'}
+      <button type="button" className={btnNav} onClick={run} disabled={running}>
+        <RefreshCw className={`size-4 text-mono-accent-dark ${running ? 'animate-spin' : ''}`} aria-hidden />
+        {running ? 'Aktualisiert …' : 'Aktualisieren'}
       </button>
     </span>
   )

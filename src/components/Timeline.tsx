@@ -73,8 +73,8 @@ export function Timeline({ items, milestones }: { items: Initiative[]; milestone
                     .map((m) => (
                       <div
                         key={m.id}
-                        className="absolute top-3 size-2 rounded-full bg-rag-yellow"
-                        style={{ left: `calc(${pct(parseDate(m.due_date)!)}% - 4px)` }}
+                        className="absolute top-[11px] size-2.5 rounded-full border-2 border-mono-ink bg-white"
+                        style={{ left: `calc(${pct(parseDate(m.due_date)!)}% - 5px)` }}
                         title={`${m.title}: ${fmtDate(m.due_date)}`}
                       />
                     ))}
@@ -87,7 +87,7 @@ export function Timeline({ items, milestones }: { items: Initiative[]; milestone
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-6 text-[13px] text-mono-muted">
           <span className="inline-flex items-center gap-2"><span className="h-2.5 w-[22px] rounded-[5px] bg-mono-accent" />Aktiv</span>
           <span className="inline-flex items-center gap-2"><span className="h-2.5 w-[22px] rounded-[5px] bg-mono-done" />Abgeschlossen</span>
-          <span className="inline-flex items-center gap-2"><span className="size-2.5 rounded-full bg-rag-yellow" />Meilenstein</span>
+          <span className="inline-flex items-center gap-2"><span className="size-2.5 rounded-full border-2 border-mono-ink bg-white" />Meilenstein</span>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth'
 import { errorText } from '@/lib/errors'
 import type { Database } from '@/lib/database.types'
 import { STATUS_LABEL, chf, fmtDate, ragState, warnings, type Initiative, type Milestone } from '@/lib/portfolio'
-import { Content, ErrorNote, Page, PageHeader, Panel, btnDarkSolid, btnText } from '@/components/mono'
+import { Content, ErrorNote, Page, PageHeader, Panel, btnNav, btnText } from '@/components/mono'
 import { RagBadge } from '@/components/RagBadge'
 import { BudgetBar } from '@/components/BudgetBar'
 import { MilestoneList, type MilestoneActions } from '@/components/MilestoneEditor'
@@ -136,7 +136,7 @@ export function InitiativeView({
         right={
           <>
             <RagBadge state={ragState(i)} size={24} />
-            {canEdit && <Link to={`/initiative/${i.key}/bearbeiten`} className={`${btnDarkSolid} min-h-11 px-6 text-base no-underline`}>Bearbeiten</Link>}
+            {canEdit && <Link to={`/initiative/${i.key}/bearbeiten`} className={`${btnNav} no-underline`}>Bearbeiten</Link>}
           </>
         }
       />

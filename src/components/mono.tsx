@@ -20,7 +20,13 @@ export const btnText = `${btn} min-h-11 px-1 border-0 bg-transparent font-medium
 // Buttons on the navy band
 const dark = `inline-flex items-center gap-2 min-h-11 rounded-xl border text-[15px] cursor-pointer disabled:cursor-default disabled:opacity-50 ${focusDark}`
 export const btnDarkGhost = `${dark} px-[18px] border-mono-tile-line bg-transparent font-medium text-mono-bg`
+// Compact outline buttons of the top navigation row
+export const btnNav = `inline-flex items-center gap-2 min-h-9 rounded-[10px] border border-mono-tile-line bg-transparent px-3.5 text-sm font-medium text-mono-bg cursor-pointer disabled:cursor-default disabled:opacity-50 ${focusDark}`
 export const btnDarkSolid = `${dark} px-[22px] border-mono-accent-dark bg-mono-accent-dark font-bold text-mono-ink`
+
+export function Logo() {
+  return <img src={`${import.meta.env.BASE_URL}montalux-logo.svg`} alt="Montalux" className="h-8 w-auto" />
+}
 
 export function Page({ children }: { children: React.ReactNode }) {
   return <div className="min-h-svh bg-mono-bg text-mono-ink">{children}</div>
@@ -60,7 +66,10 @@ export function PageHeader({
   right?: React.ReactNode
 }) {
   return (
-    <BandInner className="gap-5 pt-10 pb-16">
+    <BandInner className="gap-5 pt-8 pb-16">
+      <Link to="/" className={`self-start ${focusDark}`}>
+        <Logo />
+      </Link>
       <Link to={back.to} className={`inline-flex min-h-11 items-center gap-2 self-start text-base text-mono-muted-dark no-underline ${focusDark}`}>
         <ArrowLeft className="size-[18px] text-mono-accent-dark" aria-hidden />
         {back.label}

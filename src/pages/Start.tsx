@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { LogOut } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import type { Tables } from '@/lib/database.types'
@@ -14,7 +15,7 @@ import {
   type JiraLink,
   type Milestone,
 } from '@/lib/portfolio'
-import { BandInner, Content, Page, btnDarkGhost, btnDarkSolid } from '@/components/mono'
+import { BandInner, Content, Logo, Page, btnNav } from '@/components/mono'
 import { RagBadge } from '@/components/RagBadge'
 import { InitiativeCard } from '@/components/InitiativeCard'
 import { BudgetSummary } from '@/components/BudgetSummary'
@@ -62,13 +63,15 @@ export default function Start() {
   const actions = (
     <>
       {isPm && <SyncButton onDone={load} />}
-      {isPm && <Link to="/neu" className={btnDarkSolid}>Neue Initiative</Link>}
+      {isPm && <Link to="/neu" className={btnNav}>Neue Initiative</Link>}
     </>
   )
   const account = (
     <>
-      <span className="text-[15px] text-mono-muted-dark">{appUser?.display_name}</span>
-      <button type="button" className={btnDarkGhost} onClick={() => supabase.auth.signOut()}>Abmelden</button>
+      <span className="px-1 text-sm text-mono-muted-dark">{appUser?.display_name}</span>
+      <button type="button" className={`${btnNav} !px-2.5`} aria-label="Abmelden" title="Abmelden" onClick={() => supabase.auth.signOut()}>
+        <LogOut className="size-4 text-mono-accent-dark" aria-hidden />
+      </button>
     </>
   )
 
@@ -145,7 +148,7 @@ function Frame({ actions, account, band, children }: { actions?: React.ReactNode
     <Page>
       <BandInner wide className="gap-10 pt-8 pb-[72px]">
         <div className="flex items-center justify-between gap-4">
-          <img src={`${import.meta.env.BASE_URL}montalux-logo.svg`} alt="Montalux" className="h-8 w-auto" />
+          <Logo />
           <div className="flex flex-wrap items-center justify-end gap-3">
             {actions}
             {account}

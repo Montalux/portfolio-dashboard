@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fmtDate, parseDate, ragState, today, type Initiative, type JiraLink, type Milestone, type RagState } from '@/lib/portfolio'
 
 const ROW = 30
@@ -13,6 +14,7 @@ export function Timeline({ items, milestones, links }: { items: Initiative[]; mi
   const wrap = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(900)
   const [tip, setTip] = useState<Tip | null>(null)
+  const navigate = useNavigate()
 
   useLayoutEffect(() => {
     const el = wrap.current
@@ -73,7 +75,7 @@ export function Timeline({ items, milestones, links }: { items: Initiative[]; mi
           const ms = milestones.filter((m) => m.initiative_id === i.id)
           const epics = links.filter((l) => l.initiative_id === i.id && l.kind === 'epic' && l.due_date)
           return (
-            <g key={i.id}>
+            <g key={i.id} className="cursor-pointer" onClick={() => navigate(`/initiative/${i.key}`)}>
               <text x={0} y={y + ROW / 2 + 4} fontSize={12} fill={done ? '#8a8984' : '#0b0b0b'}>
                 <tspan fontWeight={600}>{i.key}</tspan>
                 {width >= 640 && <tspan dx={6}>{truncate(i.title, 26)}</tspan>}

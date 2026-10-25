@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { CircleHelp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
@@ -53,6 +54,11 @@ export default function Start() {
     <header className="mb-6 flex items-center justify-between gap-4">
       <h1 className="text-xl font-semibold">Portfolio-Dashboard</h1>
       <div className="flex items-center gap-3 text-sm">
+        {appUser?.role === 'pm' && (
+          <Button asChild size="sm">
+            <Link to="/neu">Neue Initiative</Link>
+          </Button>
+        )}
         <span className="hidden sm:inline">{appUser?.display_name}</span>
         <Button variant="outline" size="sm" onClick={() => supabase.auth.signOut()}>Abmelden</Button>
       </div>
@@ -100,7 +106,7 @@ export function StartView({ data, header }: { data: Data; header: React.ReactNod
               <li key={i.id} className="flex gap-3 rounded-xl border border-neutral-300 bg-white p-4">
                 <CircleHelp className="mt-0.5 size-5 shrink-0 text-neutral-700" aria-hidden />
                 <div>
-                  <p className="text-xs text-neutral-500">{i.key} · {i.title}</p>
+                  <Link to={`/initiative/${i.key}`} className="text-xs text-neutral-500 hover:underline">{i.key} · {i.title}</Link>
                   <p className="font-medium">{i.decision_question}</p>
                 </div>
               </li>

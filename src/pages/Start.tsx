@@ -68,10 +68,10 @@ export default function Start() {
   )
   const account = (
     <>
-      <span className="px-1 text-sm text-mono-muted-dark">{appUser?.display_name}</span>
       <button type="button" className={`${btnNav} !px-2.5`} aria-label="Abmelden" title="Abmelden" onClick={() => supabase.auth.signOut()}>
         <LogOut className="size-4 text-mono-accent-dark" aria-hidden />
       </button>
+      <span className="px-1 text-sm text-mono-muted-dark">{appUser?.display_name}</span>
     </>
   )
 

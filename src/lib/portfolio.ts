@@ -78,7 +78,7 @@ export function budgetTotals(items: Initiative[]): BudgetTotals {
   const spentApproved = sum(approvedItems.map((i) => i.actual_chf))
   return {
     approved,
-    spent: sum(active.map((i) => i.actual_chf)),
+    spent: spentApproved,
     rest: approved - spentApproved,
     notApproved: sum(active.filter((i) => i.budget_status !== 'bewilligt').map((i) => i.budget_chf)),
   }

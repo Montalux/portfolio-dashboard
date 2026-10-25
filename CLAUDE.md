@@ -25,7 +25,18 @@ Projekt-Portfolio der Montalux AG für GL und VR: RAG-Status, Budget, Termine, T
 `supabase/migrations/001_init.sql`: app_user, initiative, milestone, dependency, jira_source, jira_link (mit Cache), change_log, snapshot, sync_run. Trigger für updated_at, rag_updated_at und Änderungshistorie. change_log und snapshot sind append-only (Trigger blockiert Update und Delete auch für Admins). Initiativen werden archiviert, nie gelöscht.
 `002_private_helpers.sql`: SECURITY-DEFINER-Hilfsfunktionen im Schema `private`, nicht über die API aufrufbar.
 
+`003_jira_sync.sql`: pg_cron-Job `jira-sync-daily` (05:00 UTC) ruft die Edge Function auf, `check_cron_secret()` und `take_weekly_snapshot()` (nur service_role).
+`004_pg_net_schema.sql`: pg_net im Schema `extensions`.
+
 Nach jeder Migration: Typen neu generieren nach `src/lib/database.types.ts` und Security-Advisor prüfen.
+
+## Jira-Sync
+
+Edge Function `supabase/functions/jira-sync` (verify_jwt aus, eigene Prüfung): Cron-Aufruf mit Header `x-cron-secret`, manueller Aufruf nur mit Rolle `pm`. Aktualisiert den Cache in `jira_link` (Titel, Status, Start, Due, Fortschritt der Epics über Children), montags zusätzlich Snapshot. Fehler pro Quelle landen in `jira_link.sync_error` und `sync_run`, der letzte Cache bleibt.
+
+Pro Umgebung nötig (nicht im Repo):
+- Vault-Secrets `project_url` und `cron_secret`
+- Edge-Function-Secret pro Quelle, Name gemäss `jira_source.secret_name` (z.B. `JIRA_TOKEN_MONTALUX`), Wert = Atlassian-API-Token des Kontos in `jira_source.auth_email`
 
 ## Etappen
 

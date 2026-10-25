@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CircleHelp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -21,12 +21,14 @@ import { InitiativeCard } from '@/components/InitiativeCard'
 import { BudgetSummary } from '@/components/BudgetSummary'
 import { UpcomingList } from '@/components/UpcomingList'
 import { Timeline } from '@/components/Timeline'
+import { SyncButton } from '@/components/SyncButton'
 
 export type Data = {
   initiatives: Initiative[]
   milestones: Milestone[]
   links: JiraLink[]
   lastSync: Tables<'sync_run'> | null
+  lastRun?: Tables<'sync_run'> | null
 }
 
 export default function Start() {
@@ -34,26 +36,34 @@ export default function Start() {
   const [data, setData] = useState<Data | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    Promise.all([
+  const load = useCallback(async () => {
+    const [i, m, l, s, r] = await Promise.all([
       supabase.from('initiative').select('*').is('archived_at', null),
       supabase.from('milestone').select('*'),
       supabase.from('jira_link').select('*'),
       supabase.from('sync_run').select('*').eq('ok', true).order('finished_at', { ascending: false }).limit(1),
-    ]).then(([i, m, l, s]) => {
-      const err = i.error ?? m.error ?? l.error ?? s.error
-      if (err) {
-        setError(err.message)
-        return
-      }
-      setData({ initiatives: i.data ?? [], milestones: m.data ?? [], links: l.data ?? [], lastSync: s.data?.[0] ?? null })
+      supabase.from('sync_run').select('*').not('finished_at', 'is', null).order('finished_at', { ascending: false }).limit(1),
+    ])
+    const err = i.error ?? m.error ?? l.error ?? s.error ?? r.error
+    if (err) return setError(err.message)
+    setData({
+      initiatives: i.data ?? [],
+      milestones: m.data ?? [],
+      links: l.data ?? [],
+      lastSync: s.data?.[0] ?? null,
+      lastRun: r.data?.[0] ?? null,
     })
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const header = (
     <header className="mb-6 flex items-center justify-between gap-4">
       <h1 className="text-xl font-semibold">Portfolio-Dashboard</h1>
       <div className="flex items-center gap-3 text-sm">
+        {appUser?.role === 'pm' && <SyncButton onDone={load} />}
         {appUser?.role === 'pm' && (
           <Button asChild size="sm">
             <Link to="/neu">Neue Initiative</Link>
@@ -72,7 +82,7 @@ export default function Start() {
 }
 
 export function StartView({ data, header }: { data: Data; header: React.ReactNode }) {
-  const { initiatives, milestones, links, lastSync } = data
+  const { initiatives, milestones, links, lastSync, lastRun } = data
   const decisions = initiatives.filter((i) => i.decision_needed)
   const tiles = tileInitiatives(initiatives)
   const linksOf = (id: string) => links.filter((l) => l.initiative_id === id)
@@ -95,7 +105,10 @@ export function StartView({ data, header }: { data: Data; header: React.ReactNod
         <span className="text-sm text-neutral-600">
           {initiatives.filter((i) => i.status === 'laufend').length} laufend · {initiatives.filter((i) => i.status === 'geplant').length} geplant
         </span>
-        <span className="ml-auto text-xs text-neutral-500">Datenstand {asOf ? fmtDate(new Date(asOf)) : '-'}</span>
+        <span className="ml-auto text-right text-xs text-neutral-500">
+          Datenstand {asOf ? fmtDate(new Date(asOf)) : '-'}
+          {lastRun && !lastRun.ok && <span className="block">Letzter Jira-Sync mit Fehlern ({fmtDate(new Date(lastRun.finished_at!))})</span>}
+        </span>
       </section>
 
       {/* 2. Decisions (hidden when empty) */}

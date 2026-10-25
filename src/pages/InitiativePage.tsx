@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Markdown from 'react-markdown'
-import { ArrowLeft, CircleHelp, ExternalLink, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, CircleHelp, TriangleAlert } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth'
 import { errorText } from '@/lib/errors'
 import type { Database } from '@/lib/database.types'
-import { chf, fmtDate, ragState, warnings, type Initiative, type JiraLink, type Milestone } from '@/lib/portfolio'
+import { chf, fmtDate, ragState, warnings, type Initiative, type Milestone } from '@/lib/portfolio'
 import { Button } from '@/components/ui/button'
 import { RagBadge } from '@/components/RagBadge'
 import { BudgetBar } from '@/components/BudgetBar'
 import { InitiativeForm } from '@/components/InitiativeForm'
 import { MilestoneList, type MilestoneActions } from '@/components/MilestoneEditor'
+import { JiraLinkList, type LinkActions, type LinkWithSource, type SourceOption } from '@/components/JiraLinkList'
 
 type Update = Database['public']['Tables']['initiative']['Update']
-export type LinkWithSource = JiraLink & { jira_source: { base_url: string } | null }
 export type Dep = { direction: 'blocks' | 'blocked_by'; key: string; title: string }
 
 export type DetailData = {
@@ -22,6 +22,7 @@ export type DetailData = {
   milestones: Milestone[]
   links: LinkWithSource[]
   deps: Dep[]
+  sources: SourceOption[]
 }
 
 const STATUS_LABEL = { geplant: 'Geplant', laufend: 'Laufend', abgeschlossen: 'Abgeschlossen', abgebrochen: 'Abgebrochen' }
@@ -36,18 +37,19 @@ export default function InitiativePage() {
   const load = useCallback(async () => {
     const { data: i, error: e } = await supabase.from('initiative').select('*').eq('key', key!).maybeSingle()
     if (e || !i) return setError(e?.message ?? 'Initiative nicht gefunden.')
-    const [m, l, out, inc] = await Promise.all([
+    const [m, l, out, inc, src] = await Promise.all([
       supabase.from('milestone').select('*').eq('initiative_id', i.id),
       supabase.from('jira_link').select('*, jira_source(base_url)').eq('initiative_id', i.id),
       supabase.from('dependency').select('other:initiative!dependency_blocks_initiative_id_fkey(key, title)').eq('initiative_id', i.id),
       supabase.from('dependency').select('other:initiative!dependency_initiative_id_fkey(key, title)').eq('blocks_initiative_id', i.id),
+      supabase.from('jira_source').select('id, name').eq('active', true).order('name'),
     ])
     type DepRow = { other: { key: string; title: string } | null }
     const deps: Dep[] = [
       ...((out.data ?? []) as unknown as DepRow[]).filter((r) => r.other).map((r) => ({ direction: 'blocks' as const, ...r.other! })),
       ...((inc.data ?? []) as unknown as DepRow[]).filter((r) => r.other).map((r) => ({ direction: 'blocked_by' as const, ...r.other! })),
     ]
-    setData({ initiative: i, milestones: m.data ?? [], links: (l.data ?? []) as unknown as LinkWithSource[], deps })
+    setData({ initiative: i, milestones: m.data ?? [], links: (l.data ?? []) as unknown as LinkWithSource[], deps, sources: src.data ?? [] })
   }, [key])
 
   useEffect(() => {
@@ -86,6 +88,20 @@ export default function InitiativePage() {
         return errorText(error)
       },
     },
+    links: {
+      sources: data.sources,
+      add: async (sourceId: string, issueKey: string, kind: 'epic' | 'jpd') => {
+        const { error } = await supabase.from('jira_link').insert({ initiative_id: id, source_id: sourceId, issue_key: issueKey, kind })
+        if (!error) await load()
+        if (error?.code === '23505') return `${issueKey} ist bereits verknüpft.`
+        return errorText(error)
+      },
+      remove: async (l: LinkWithSource) => {
+        const { error } = await supabase.from('jira_link').delete().eq('id', l.id)
+        if (!error) await load()
+        return errorText(error)
+      },
+    },
   }
 
   return <InitiativeView data={data} canEdit={appUser?.role === 'pm'} actions={actions} />
@@ -98,14 +114,17 @@ export function InitiativeView({
 }: {
   data: DetailData
   canEdit: boolean
-  actions: { save: (v: Update) => Promise<string | null>; archive: () => Promise<string | null>; milestones: MilestoneActions }
+  actions: {
+    save: (v: Update) => Promise<string | null>
+    archive: () => Promise<string | null>
+    milestones: MilestoneActions
+    links: LinkActions
+  }
 }) {
   const [editing, setEditing] = useState(false)
   const [archiveError, setArchiveError] = useState<string | null>(null)
   const { initiative: i, milestones, links, deps } = data
   const warn = warnings(i, links)
-  const epics = links.filter((l) => l.kind === 'epic')
-  const jpd = links.filter((l) => l.kind === 'jpd')
 
   return (
     <Page>
@@ -184,31 +203,7 @@ export function InitiativeView({
               </dl>
             </Box>
             <Box title="Jira">
-              {links.length === 0 && <p className="text-sm text-neutral-500">Keine verknüpften Items.</p>}
-              {[['Epics', epics], ['Discovery (JPD)', jpd]].map(([label, list]) =>
-                (list as LinkWithSource[]).length > 0 ? (
-                  <div key={label as string} className="mb-3">
-                    <p className="mb-1 text-xs text-neutral-500">{label as string}</p>
-                    <ul className="space-y-1 text-sm">
-                      {(list as LinkWithSource[]).map((l) => (
-                        <li key={l.id}>
-                          <a
-                            className="inline-flex items-center gap-1 text-[#2a78d6] hover:underline"
-                            href={l.jira_source ? `${l.jira_source.base_url}/browse/${l.issue_key}` : undefined}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {l.issue_key}<ExternalLink className="size-3" aria-hidden />
-                          </a>
-                          {l.summary && <span className="text-neutral-700"> {l.summary}</span>}
-                          {l.status && <span className="text-neutral-500"> · {l.status}</span>}
-                          {l.due_date && <span className="text-neutral-500"> · bis {fmtDate(l.due_date)}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null,
-              )}
+              <JiraLinkList links={links} canEdit={canEdit} actions={actions.links} />
             </Box>
             {deps.length > 0 && (
               <Box title="Abhängigkeiten">
